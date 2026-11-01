@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readdir,readFile,stat} from 'node:fs/promises';
+import path from 'node:path';
+import {scanFiles,selectFiles,makeVerdict} from '../scanner.mjs';
+
+async function fixtureFiles(dir='demo/trap-repo'){const out=[];async function walk(folder){for(const name of await readdir(folder)){const full=path.join(folder,name),info=await stat(full);if(info.isDirectory())await walk(full);else out.push({path:path.relative(dir,full),content:await readFile(full,'utf8'),size:info.size})}}await walk(dir);return out}
+test('local trap repo has complete recall and do-not-run verdict',async()=>{const all=await fixtureFiles(),scan=scanFiles(selectFiles(all),all),by=(kind,file)=>scan.findings.find(f=>f.kind===kind&&f.file===file);assert.equal(makeVerdict(scan).label,'DO NOT RUN');for(const [kind,file] of [['lifecycle','package.json'],['secret','.env'],['exfiltration','src/index.js'],['obfuscation','src/util.js'],['shell-pipe','scripts/setup.sh'],['prompt-injection','README.md']]){const finding=by(kind,file);assert.ok(finding,'missing '+kind+' in '+file);assert.ok(finding.line>0,'missing line for '+kind)}assert.equal(by('lifecycle','package.json').severity,'critical');assert.equal(by('secret','.env').severity,'critical');assert.equal(by('exfiltration','src/index.js').severity,'critical');assert.equal(by('obfuscation','src/util.js').severity,'critical');assert.equal(scan.signals.lockfile,false);assert.equal(scan.findings.filter(f=>f.file==='src/config.js').length,0);assert.ok(scan.findings.filter(f=>f.kind==='prompt-injection'&&f.file==='README.md').length>=2);assert.ok(scan.findings.filter(f=>f.kind==='secret'&&f.file==='.env').every(f=>f.why.includes('••••')))});

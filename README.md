@@ -1,85 +1,55 @@
-# Pet Patrol 🐕🏘️
+# ShipCheck
 
-**See what your coding agent does, decide what deserves a human, and keep a tamper-evident receipt trail.**
+**Never npm install a stranger's repo blind.**
 
-Pet Patrol is a local-first hackathon demo. Mochi, your repo watchdog, walks a planted trap-repo replay in a tiny town. Low-impact reads pass, a write pauses at the toll gate for approval, and secret paths or dangerous commands are blocked. Each decision is recorded in a SHA-256 hash chain.
+Paste a public GitHub repository URL. ShipCheck downloads its source tarball, inspects it in memory, and shows evidence-backed risks before you clone, install, or execute anything.
 
-The town fills the page width and about 60% of the viewport height. Curved dirt paths join every house to a central plaza, and Mochi animates along those paths. A confirm action stops Mochi at a small gate beside its house; the anchored card shows the exact command and policy reason. Approve lifts the gate and lets Mochi continue. Deny turns Mochi back toward the plaza. Either choice resumes the paused replay and is recorded in the receipt chain.
+## Current checkpoint: deterministic scan
 
-**Demo:** [17-second video](outputs/Pet-Patrol-demo.mp4) · [captions](outputs/Pet-Patrol-demo.srt)
-
-## Run it
-
-Requires Node.js 20+; no npm install, API key, or network access is needed.
+Run locally with Node.js 20+:
 
 ```sh
 npm start
 ```
 
-Open [http://127.0.0.1:4173](http://127.0.0.1:4173), then click **Replay trap run**. Inspect the exact command and risk reason on the gate card. Approve to lift the gate and let Mochi continue, or deny to send Mochi back to the plaza. Click **Verify receipts** to validate the chain. Receipts are stored in `data/receipts.jsonl` on your machine.
+Open http://127.0.0.1:4173 and paste `github.com/owner/repo`. A shareable `?repo=owner/repo` URL starts the same scan.
 
-The demo includes a pre-planted `.env` path, `curl | bash`, and a repository instruction injection attempt. They are fake event strings; no shell command is executed and no secret is read or included.
+The scanner makes one GitHub metadata request to resolve the default branch and one codeload tarball request. It skips binaries, files over 500 KB, common vendored folders, and scans up to 2,000 text files. Results are cached for the running server process.
 
-## What works today
+Current deterministic checks provide file, line, snippet, and explanation for:
 
-- Local replay, with a pause for human approval and explicit blocked events.
-- Deterministic local policy rules for read, write, secret-path, traversal, dangerous-command, and instruction-injection examples.
-- Live event/receipt UI over Server-Sent Events.
-- SHA-256 chained JSONL receipts and verification of order and content.
-- A local pre-flight filename scan endpoint (`POST /api/scan`); it does not open file contents. If `OPENAI_API_KEY` is set, it can optionally request a short Responses API summary using only the count of flagged filenames, not their names or contents.
-- A small `POST /api/events` ingest endpoint for normalized events.
-- An observation-only Codex CLI adapter in `adapters/codex-json.mjs`.
+- package lifecycle scripts and shell download pipes
+- committed environment files and credential-shaped strings
+- environment data sent to raw IP, Pastebin, Discord, or webhook endpoints
+- dynamic execution, long Base64 blobs, and zero-width characters
+- prompt injection aimed at AI reviewers
+- used environment variables and whether README or `.env.example` document them
+- lockfile, test, and CI presence
 
-This prototype does **not** intercept arbitrary agent actions. In particular, `codex exec --json` emits a JSONL observation stream. The documented event families include `item.started` / `item.completed`, with command details under `item`; receiving those after execution begins does not create a veto point. Claude Code supports hooks such as `PreToolUse`, which can be configured as an enforcement adapter. Hook input schemas and policy decisions need adapter-specific handling; don't treat this demo's generic event endpoint as a hardened security boundary.
+This is a read-only scanner. It does not clone, install, or run the target repository. Findings are heuristic security signals and need human review.
 
-The current UI is self-contained and uses CSS-drawn 2.5D scenery rather than loading a 3D library, so the demo still renders offline. Receipt wording is deterministic. The optional AI scan summary can be enabled with `OPENAI_API_KEY`; it sends only a count of flagged filenames, and the local summary remains available if the API call fails.
+## How Codex helped
 
-## Codex event adapter shape
+- Replaced the original replay prototype with the Node server, brutalist scan view, URL state, and SSE progress stream for ShipCheck.
+- Implemented the in-memory gzip/tar parser so the real scan needs no package install or temporary checkout.
+- Caught and fixed the distinction between a valid lifecycle script and a lifecycle script that pipes a downloaded command into a shell: both are shown, with the latter marked critical.
+- Ran a live scan of `sindresorhus/ky`, validating the GitHub metadata request, tarball download, file indexing, SSE progress, and evidence rendering data.
+- Tightened the deterministic scanner after `langchain-ai/langchain` produced false criticals: key detection now requires a real vendor shape and high entropy, Base64 needs an execution sink, and test or fixture paths are downgraded to informational findings.
+- Added regression coverage for the false-positive cases and rescanned `langchain-ai/langchain` (SAFE TO RUN, 100/100, zero criticals) and `sindresorhus/ky` (SAFE TO RUN, 92/100, zero criticals).
 
-Current Codex CLI docs describe `codex exec --json` as newline-delimited JSON events. Example events have `type: "item.started"` or `"item.completed"` and an `item`, e.g. `item.type: "command_execution"` and `item.command`. The read-only adapter maps the JSONL stream into Pet Patrol's normalized event shape and sets `observeOnly: true`:
+## Planned next checkpoint
 
-```json
-{"id":"event-1","actor":"Codex","kind":"command","action":"Run command","command":"npm test","risk":"low","observeOnly":true}
+The planted local trap repo and deterministic recall suite are now included. Scan it without a network connection using `?repo=local:demo/trap-repo`. The three.js city and OpenAI run-plan pass have not been added yet.
+
+### Publish the stage trap repo
+
+From the ShipCheck repository root, after you have authenticated the GitHub CLI:
+
+```sh
+git subtree split --prefix=demo/trap-repo -b shipcheck-trap-demo
+gh repo create aryan/shipcheck-trap-demo --public --description "Intentional security test fixture for ShipCheck"
+git push git@github.com:aryan/shipcheck-trap-demo.git shipcheck-trap-demo:main
+git branch -D shipcheck-trap-demo
 ```
 
-The UI labels these `OBS · AUTO`, `OBS · CONFIRM`, or `OBS · BLOCK` to show the policy classification without claiming the event was stopped. The endpoint is currently unauthenticated and intended for localhost demo use only. Event observation does not stop the underlying process.
-
-Try the observer from another terminal with `node adapters/codex-json.mjs "Summarize this repository"`. Set `CODEX_REPO=/path/to/repo` to choose its working directory and `PET_PATROL_URL` to change the local server address. This launches an actual Codex run and does not gate its actions; use a disposable project and normal Codex sandbox/approval settings.
-
-## Claude Code hook direction
-
-Claude Code documents hooks including `PreToolUse` for tool gating and `PostToolUse` for after-action observation. A real adapter would read the hook JSON from stdin, normalize tool name/input, call the local policy engine, then return a documented hook response that allows, denies, or asks for permission. The hook command needs timeout and fail-closed behavior tested per hook type. That adapter is not yet implemented.
-
-## Demo script (about 60 seconds)
-
-1. Start Pet Patrol and show the quiet town.
-2. Start **Replay trap run**. Point out a safe read walking through town.
-3. At the gate beside `greeting.ts`, inspect the exact command and reason. Approve to lift the gate and let Mochi continue, or deny to turn Mochi back to the plaza.
-4. Show `.env` and `curl | bash` turn red and the repo-injected instruction get blocked.
-5. Click **Verify receipts** and show the chain head and verified receipt count.
-
-Suggested narration: “Codex helped me check the live CLI event format instead of guessing. That exposed an important boundary: its JSON stream is for observation, while a true veto needs a pre-tool hook. So this demo is honest about what it can enforce and uses a replay to make the human gate reliable.”
-
-## Safety and limitations
-
-- Bind address is loopback (`127.0.0.1`); don't expose this server to a network.
-- The HTTP API accepts same-origin browser requests and local CLI calls. It has no login layer and should only be used on the local machine.
-- Policy matching is a demo heuristic, not a complete security policy. It can miss obfuscated commands and misclassify benign ones.
-- Hash chaining detects edits to the JSONL content and ordering, but the file is not signed or stored remotely; an attacker able to rewrite the whole file can recompute the chain.
-- The replay and policy decisions are simulated; this is not yet a safe agent sandbox or production approval broker.
-- No real repository scan, code contents, secrets, or personal data are included in the fixture.
-
-## Credits
-
-Core application code, UI, fixture, and CSS scenery were created for the DevDay Exchange Community Hackathon. No third-party code or visual assets are bundled. The UI uses system fonts; Google Fonts is an optional CSS import and falls back locally when offline.
-
-## References
-
-- [Codex docs](https://developers.openai.com/codex)
-- [Codex quickstart](https://developers.openai.com/codex/quickstart)
-- [Codex CLI reference](https://developers.openai.com/codex/cli/reference)
-- [Codex `--json` event format example](https://developers.openai.com/blog/eval-skills)
-- [Claude Code hooks reference](https://docs.anthropic.com/en/docs/claude-code/hooks)
-- [OpenAI developer quickstart (Responses API)](https://developers.openai.com/api/docs/quickstart)
-- [OpenAI Cookbook](https://developers.openai.com/cookbook)
-- [Hackathon event](https://luma.com/dde-ldn-hack)
+The trap repo intentionally contains fake credential-shaped strings and malicious-looking fixture code. Its README labels it as a security test fixture; never substitute real credentials.
