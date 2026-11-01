@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:03,000
+A synthetic repo, mapped as a full-town scene. Pre-flight flags the planted .env filename.
+
+2
+00:00:03,000 --> 00:00:08,000
+Safe reads pass automatically. A source edit pauses at a toll gate beside its house.
+
+3
+00:00:08,000 --> 00:00:14,000
+Approve lifts the gate and Mochi continues. The replay then blocks secret access, curl pipe bash, and an injected instruction.
+
+4
+00:00:14,000 --> 00:00:17,000
+See the activity and receipt below. Codex JSON is observation; real pre-action enforcement needs a hook.

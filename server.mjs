@@ -89,8 +89,8 @@ const server = http.createServer(async (req,res) => {
     return json(res,200,{risky,summary,source});
   }
   const file=path.join(publicDir,url.pathname==='/'?'index.html':path.basename(url.pathname));
-  try { const ext=path.extname(file); res.writeHead(200,{'content-type':ext==='.css'?'text/css':ext==='.js'?'text/javascript':'text/html'}); res.end(await readFile(file)); }
-  catch { res.writeHead(404); res.end('Not found'); }
+  try { const content=await readFile(file),ext=path.extname(file); res.writeHead(200,{'content-type':ext==='.css'?'text/css':ext==='.js'?'text/javascript':'text/html','x-content-type-options':'nosniff'}); res.end(content); }
+  catch { res.writeHead(404,{'content-type':'text/plain'}); res.end('Not found'); }
 });
 await loadLedger();
 server.listen(PORT,'127.0.0.1',()=>console.log(`Pet Patrol at http://127.0.0.1:${PORT}`));

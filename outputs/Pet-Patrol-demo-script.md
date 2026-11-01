@@ -12,7 +12,7 @@
 “Pet Patrol makes a coding agent’s repo activity visible as a tiny town. Files are houses; Mochi walks the streets. Before the run, a filename-only scan has already spotted the planted secret file.”
 
 **10–26 seconds — safe and confirm**  
-Click **Replay trap run**. “Safe reads pass automatically. This source edit is different: Mochi stops at the toll gate and waits for me.” Click **Approve this action**.
+Click **Replay trap run**. “Safe reads pass automatically. This source edit is different: Mochi stops at the gate beside the target house. The card shows the exact command and why it needs a decision.” Click **Approve** and show the gate lift as Mochi continues.
 
 **26–43 seconds — blocks**  
 “The planted `.env` access, `curl | bash`, and injected repo instruction are blocked and recorded. The demo never executes those strings.”

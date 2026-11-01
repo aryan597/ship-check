@@ -4,6 +4,10 @@
 
 Pet Patrol is a local-first hackathon demo. Mochi, your repo watchdog, walks a planted trap-repo replay in a tiny town. Low-impact reads pass, a write pauses at the toll gate for approval, and secret paths or dangerous commands are blocked. Each decision is recorded in a SHA-256 hash chain.
 
+The town fills the page width and about 60% of the viewport height. Curved dirt paths join every house to a central plaza, and Mochi animates along those paths. A confirm action stops Mochi at a small gate beside its house; the anchored card shows the exact command and policy reason. Approve lifts the gate and lets Mochi continue. Deny turns Mochi back toward the plaza. Either choice resumes the paused replay and is recorded in the receipt chain.
+
+**Demo:** [17-second video](outputs/Pet-Patrol-demo.mp4) · [captions](outputs/Pet-Patrol-demo.srt)
+
 ## Run it
 
 Requires Node.js 20+; no npm install, API key, or network access is needed.
@@ -12,7 +16,7 @@ Requires Node.js 20+; no npm install, API key, or network access is needed.
 npm start
 ```
 
-Open [http://127.0.0.1:4173](http://127.0.0.1:4173), then click **Replay trap run**. At the toll gate choose **Approve this action** or **Deny and log**. Click **Verify receipts** to validate the chain. Receipts are stored in `data/receipts.jsonl` on your machine.
+Open [http://127.0.0.1:4173](http://127.0.0.1:4173), then click **Replay trap run**. Inspect the exact command and risk reason on the gate card. Approve to lift the gate and let Mochi continue, or deny to send Mochi back to the plaza. Click **Verify receipts** to validate the chain. Receipts are stored in `data/receipts.jsonl` on your machine.
 
 The demo includes a pre-planted `.env` path, `curl | bash`, and a repository instruction injection attempt. They are fake event strings; no shell command is executed and no secret is read or included.
 
@@ -50,7 +54,7 @@ Claude Code documents hooks including `PreToolUse` for tool gating and `PostTool
 
 1. Start Pet Patrol and show the quiet town.
 2. Start **Replay trap run**. Point out a safe read walking through town.
-3. At the toll gate, approve the small source-file write.
+3. At the gate beside `greeting.ts`, inspect the exact command and reason. Approve to lift the gate and let Mochi continue, or deny to turn Mochi back to the plaza.
 4. Show `.env` and `curl | bash` turn red and the repo-injected instruction get blocked.
 5. Click **Verify receipts** and show the chain head and verified receipt count.
 
