@@ -4,7 +4,7 @@
 
 Paste a public GitHub repository URL. ShipCheck downloads its source tarball, inspects it in memory, and shows evidence-backed risks before you clone, install, or execute anything.
 
-## Current checkpoint: deterministic scan
+## What ships
 
 Run locally with Node.js 20+:
 
@@ -37,9 +37,26 @@ This is a read-only scanner. It does not clone, install, or run the target repos
 - Tightened the deterministic scanner after `langchain-ai/langchain` produced false criticals: key detection now requires a real vendor shape and high entropy, Base64 needs an execution sink, and test or fixture paths are downgraded to informational findings.
 - Added regression coverage for the false-positive cases and rescanned `langchain-ai/langchain` (SAFE TO RUN, 100/100, zero criticals) and `sindresorhus/ky` (SAFE TO RUN, 92/100, zero criticals).
 
-## Planned next checkpoint
+## Offline demo and submission
 
-The planted local trap repo and deterministic recall suite are now included. Scan it without a network connection using `?repo=local:demo/trap-repo`. The three.js city and OpenAI run-plan pass have not been added yet.
+The planted local trap repo and deterministic recall suite are included. Scan it without a network connection:
+
+```text
+http://127.0.0.1:4173/?repo=local:demo/trap-repo
+```
+
+It deliberately produces **DO NOT RUN** with evidence for a malicious install hook, fake committed keys, webhook exfiltration, Base64 execution, a shell download pipe, and reviewer-targeting prompt injection. All keys and URLs in the fixture are fake.
+
+### 90-second demo outline
+
+1. Start on the hero: “Never npm install a stranger's repo blind.”
+2. Paste `local:demo/trap-repo`; the scan works with Wi-Fi off.
+3. Show live scan progress, the `DO NOT RUN` verdict, and the file-and-line evidence for the install hook and webhook.
+4. Point out masked fake secrets and the prompt-injection finding.
+5. Click the shared URL in the address bar and explain that the exact same scan can be repeated.
+6. Close on `Verify` quality: deterministic checks, precision regression tests, and read-only tarball inspection.
+
+For a contrast shot, scan `sindresorhus/ky`; the precision regression result is **SAFE TO RUN**, 92/100 with no critical findings.
 
 ### Publish the stage trap repo
 
