@@ -28,6 +28,25 @@ Current deterministic checks provide file, line, snippet, and explanation for:
 
 This is a read-only scanner. It does not clone, install, or run the target repository. Findings are heuristic security signals and need human review.
 
+ShipCheck's deterministic core works without an API key or Wi-Fi against its local trap fixture. The fake trap-repo values are deliberately planted test data; public-repo results come from real files in the downloaded tarball.
+
+## Optional OpenAI run-plan refinement
+
+When `OPENAI_API_KEY` is present, ShipCheck makes one server-side Responses API call after deterministic scanning. It sends only the deterministic plan, findings, README excerpt, and manifests. Repository content is untrusted data, never instructions. The structured response must cite an existing scanned source file for every command; any invalid response, API failure, or eight-second timeout silently keeps the deterministic **basic plan**.
+
+Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` in the Node service environment. Do not put either value in browser code or GitHub Pages.
+
+## Deployment
+
+GitHub Pages can publish the static project showcase from `docs/`. Pages cannot run the scanner because the scanner is a Node service and keeps `OPENAI_API_KEY` server-side.
+
+Deploy the interactive scanner separately with Docker:
+
+```sh
+docker build -t shipcheck .
+docker run --rm -p 4173:4173 -e OPENAI_API_KEY shipcheck
+```
+
 ## How Codex helped
 
 - Replaced the original replay prototype with the Node server, brutalist scan view, URL state, and SSE progress stream for ShipCheck.

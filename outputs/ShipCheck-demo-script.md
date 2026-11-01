@@ -1,25 +1,46 @@
-# ShipCheck demo video — 75 to 90 seconds
+# ShipCheck demo — voiceover and screen direction
 
-## 0–10 seconds: Promise
+**Target duration:** 75–90 seconds. Read at a calm, confident pace.
 
-Show the hero and say: “Never npm install a stranger’s repo blind. ShipCheck reads a public repository tarball before you clone or install it.”
+## 0–10s — Open
 
-## 10–25 seconds: Offline setup
+**On screen:** ShipCheck hero.
 
-Paste `local:demo/trap-repo` and start the scan. Say: “This is a planted trap repository, so the demo works without Wi-Fi.”
+**Voiceover:** “Every developer has faced this moment: you find a useful-looking GitHub repository, and the next step is npm install. But what is that code about to do to your machine?”
 
-## 25–45 seconds: Evidence
+## 10–22s — Promise
 
-Show the live feed, then the verdict. Say: “The scanner never executes the repository. It finds a postinstall command that downloads and runs a shell script, fake committed credentials, and code that sends environment variables to a webhook.”
+**On screen:** Paste `local:demo/trap-repo`, click Scan.
 
-## 45–60 seconds: Explain trust
+**Voiceover:** “ShipCheck answers that before you clone, install, or run anything. It downloads a read-only source tarball and inspects it locally. Nothing from the repository is executed.”
 
-Open two findings. Say: “Every finding includes the file, line, source snippet, and a plain-English explanation. It is evidence, not a model guess.”
+## 22–40s — Live evidence
 
-## 60–75 seconds: Precision
+**On screen:** Live feed followed by the DO NOT RUN verdict.
 
-Scan `sindresorhus/ky`. Say: “Precision matters: our regression scan of Ky has no critical findings. Test and documentation paths are treated differently from runtime source.”
+**Voiceover:** “Here is our planted trap repository. ShipCheck finds a postinstall script that downloads and runs a shell command. That means npm install could execute remote code immediately. The verdict is: do not run.”
 
-## 75–90 seconds: Close
+## 40–58s — Why trust it
 
-Return to the headline. Say: “ShipCheck gives developers a safer first look before running unfamiliar code. It only downloads and inspects a tarball; it never clones, installs, or executes it.”
+**On screen:** Show `package.json`, then `src/index.js` and `.env` findings.
+
+**Voiceover:** “This is not a vague warning. Every result includes the file, line, source snippet, and a plain-English explanation. It found environment variables being sent to a webhook, and committed credential-shaped values. The displayed keys are masked, and the fixture uses fake values.”
+
+## 58–70s — Injection and precision
+
+**On screen:** Prompt-injection finding, then switch to `sindresorhus/ky`.
+
+**Voiceover:** “It also spots hidden instructions aimed at AI reviewers. And precision matters: a scan of Ky has no critical findings. ShipCheck distinguishes runtime risks from examples, tests, and documentation.”
+
+## 70–85s — Close
+
+**On screen:** Return to the ShipCheck headline and verdict panel.
+
+**Voiceover:** “ShipCheck gives you the evidence to decide whether a repository is safe to run. It never clones, installs, or executes the target. It just tells you what you are about to trust.”
+
+## ElevenLabs settings
+
+- Voice: clear, grounded, technical but not dramatic.
+- Pace: about 0.95×.
+- Export: WAV or high-bitrate MP3.
+- Leave half a second of silence between sections for screen cuts.
