@@ -59,6 +59,7 @@ Suggested narration: “Codex helped me check the live CLI event format instead 
 ## Safety and limitations
 
 - Bind address is loopback (`127.0.0.1`); don't expose this server to a network.
+- The HTTP API accepts same-origin browser requests and local CLI calls. It has no login layer and should only be used on the local machine.
 - Policy matching is a demo heuristic, not a complete security policy. It can miss obfuscated commands and misclassify benign ones.
 - Hash chaining detects edits to the JSONL content and ordering, but the file is not signed or stored remotely; an attacker able to rewrite the whole file can recompute the chain.
 - The replay and policy decisions are simulated; this is not yet a safe agent sandbox or production approval broker.

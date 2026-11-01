@@ -35,12 +35,14 @@ async function loadLedger() {
   await mkdir(dataDir,{recursive:true});
   try { const text=await readFile(ledger,'utf8'); receipts=text.trim().split('\n').filter(Boolean).map(JSON.parse); } catch { receipts=[]; }
 }
-function json(res, status, data) { res.writeHead(status, {'content-type':'application/json','access-control-allow-origin':'*'}); res.end(JSON.stringify(data)); }
+function json(res, status, data) { res.writeHead(status, {'content-type':'application/json','x-content-type-options':'nosniff'}); res.end(JSON.stringify(data)); }
 async function body(req) { let s=''; for await (const c of req) s+=c; return s ? JSON.parse(s) : {}; }
 
 const server = http.createServer(async (req,res) => {
   const url = new URL(req.url,'http://localhost');
-  if (req.method === 'OPTIONS') { res.writeHead(204, {'access-control-allow-origin':'*','access-control-allow-methods':'GET,POST,OPTIONS','access-control-allow-headers':'content-type'}); return res.end(); }
+  const origin=req.headers.origin;
+  if(origin && ![`http://127.0.0.1:${PORT}`,`http://localhost:${PORT}`].includes(origin)) return json(res,403,{error:'Cross-origin requests are not allowed'});
+  if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   if (url.pathname === '/api/events' && req.method === 'GET') return json(res,200,events);
   if (url.pathname === '/api/receipts' && req.method === 'GET') return json(res,200,receipts);
   if (url.pathname === '/api/verify' && req.method === 'GET') {
