@@ -2,96 +2,161 @@
 
 **Never npm install a stranger's repo blindly.**
 
-Paste a public GitHub repository URL. ShipCheck downloads its source tarball, inspects it in memory, and shows evidence-backed risks before you clone, install, or execute anything.
+Paste a public GitHub project. Before you clone or install anything, ShipCheck tells you whether it's safe to run and exactly how to run it. It reads the code without running it, and every warning points to the exact file and line.
 
-## What ships
+[Try the demo](https://aryan597.github.io/ship-check/) · [Run it yourself](#run-it) · [MIT License](LICENSE)
 
-Run it with Node.js 20+. There is nothing to clone or configure:
+![ShipCheck investigating a repo and stamping it DO NOT RUN](docs/readme/demo.gif)
+
+## Run it
+
+You need [Node.js](https://nodejs.org) 20 or newer. There's nothing else to install.
 
 ```sh
 npx github:aryan597/ship-check
 ```
 
-Or, from a checkout, run `npm start`.
+Open http://127.0.0.1:4173 and paste a project, such as `github.com/sindresorhus/ky`.
 
-Open http://127.0.0.1:4173 and paste `github.com/owner/repo`. A shareable `?repo=owner/repo` URL starts the same scan.
+The [online demo](https://aryan597.github.io/ship-check/) replays example scans. To check any public project, run ShipCheck yourself.
 
-The scanner makes one GitHub metadata request to resolve the default branch and one codeload tarball request. It skips binaries, files over 500 KB, common vendored folders, and scans up to 2,000 text files. Results are cached for the running server process.
+## Why this exists
 
-Current deterministic checks provide file, line, snippet, and explanation for:
+Running someone's project is an act of trust. It can do anything you can do: read your files, use your logins, and send your keys anywhere.
 
-- package lifecycle scripts and shell download pipes
-- committed environment files and credential-shaped strings
-- environment data sent to raw IP, Pastebin, Discord, or webhook endpoints
-- dynamic execution, long Base64 blobs, and zero-width characters
-- prompt injection aimed at AI reviewers
-- used environment variables and whether README or `.env.example` document them
-- lockfile, test, and CI presence
+- **Installing is running.** A single `npm install` can run code from the project before you've opened one file.
+- **A nice README proves nothing.** It tells you what a project says it does, not what the code really does.
+- **AI tools run code too.** Coding assistants download and run projects for you, and a file can try to talk them into it.
 
-Two guarantees are enforced by [test/guarantees.test.mjs](test/guarantees.test.mjs): the scanner cannot import anything that spawns a process or writes to disk, and every finding has a file, a line, and a snippet. No evidence, no finding.
+So ShipCheck reads the code first and shows you the exact lines that worry it. The decision stays yours.
 
-This is a read-only scanner. It does not clone, install, or run the target repository. Findings are heuristic security signals and need human review.
+![Why we do this](docs/readme/why.jpg)
 
-ShipCheck's deterministic core works without an API key or Wi-Fi against its local trap fixture. The fake trap-repo values are deliberately planted test data; public-repo results come from real files in the downloaded tarball.
+## What it checks
 
-## Optional OpenAI run-plan refinement
+| Check | What it looks for | Example |
+|---|---|---|
+| **Install traps** | Scripts that run by themselves when you install | `"postinstall": "curl … \| bash"` |
+| **Download-and-run** | Code pulled from the internet and run on the spot | `wget -qO- … \| sh` |
+| **Leaked keys** | Real-looking API keys, private keys, and committed `.env` files | `AKIA••••`, `sk-p••••` |
+| **Data theft** | Private settings sent to webhooks, Pastebin, Discord, or raw IP addresses | `fetch("webhook…", process.env)` |
+| **Hidden code** | Base64 that gets executed, and invisible characters | `eval(Buffer.from(…, "base64"))` |
+| **AI tricks** | Text telling AI tools to ignore instructions or call the project safe | `"ignore previous instructions"` |
 
-When `OPENAI_API_KEY` is present, ShipCheck makes one server-side Responses API call after deterministic scanning. It sends only the deterministic plan, findings, README excerpt, and manifests. Repository content is untrusted data, never instructions. The structured response must cite an existing scanned source file for every command; any invalid response, API failure, or eight-second timeout silently keeps the deterministic **basic plan**.
+It also shows whether the project has a lockfile, tests, and CI, and which environment variables it uses.
 
-Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` in the Node service environment. Do not put either value in browser code or GitHub Pages.
+## What you get
 
-## Deployment
+| | |
+|---|---|
+| **A verdict with proof.** DO NOT RUN, RUN WITH CARE, or SAFE TO RUN, with a score out of 100. ![A DO NOT RUN verdict](docs/readme/verdict.jpg) | **The exact lines.** Every warning shows the file, the line, and the code. Secrets are masked. ![Evidence with file and line](docs/readme/evidence.jpg) |
+| **What to do next.** Guided steps for whether you haven't run it, already ran it, or own the repo. ![Choosing what fits you](docs/readme/next-steps.jpg) | **A straight answer on clean projects.** Plus the commands to run them. ![A SAFE TO RUN verdict](docs/readme/safe.jpg) |
+| **A live investigation.** Watch it work through the files as it reads them. ![The scan in progress](docs/readme/investigating.jpg) | **A clear answer on private projects.** It says when it can't get in. ![A Case Sealed screen](docs/readme/sealed.jpg) |
 
-GitHub Pages can publish the static project showcase from `docs/`. Pages cannot run the scanner because the scanner is a Node service and keeps `OPENAI_API_KEY` server-side, so the showcase runs the real UI against scans recorded from the real scanner. After changing the UI, regenerate it with `node scripts/build-pages.mjs` (needs network access) and set the Pages source to the `/docs` folder.
+The next steps are built from the scan's findings:
 
-The frontend has no build step or runtime dependencies. Abril Fatface, Alfa Slab One, Courier Prime, Covered By Your Grace, and JetBrains Mono are self-hosted in `public/` under the SIL Open Font License, so the offline demo looks the same with Wi-Fi off. The licenses are in `licenses/fonts/`.
+- **I haven't run it:** what it would do, step by step, and a Docker command for looking inside safely.
+- **I already ran it:** a checklist for what to replace and what to look for.
+- **It's my repo:** a list of what to fix, or a README badge if it's clean.
 
-Deploy the interactive scanner separately with Docker:
+Each path also gives you a verdict card to share and a message to paste into your AI coding assistant.
+
+## Two promises, enforced by tests
+
+[`test/guarantees.test.mjs`](test/guarantees.test.mjs) fails if either of these stops being true:
+
+- **It never executes a line.** The scanner can't import anything that runs programs or saves files. It downloads the project's source archive and reads it in memory.
+- **No evidence, no finding.** Every finding must have a file, a line, and a code snippet.
+
+## Try it on the examples
+
+| Project | Result | Notes |
+|---|---|---|
+| `local:demo/trap-repo` | **DO NOT RUN**, 0/100 | Our planted test repo. All six attacks are caught, and it works offline. Its keys and URLs are fake. |
+| `sindresorhus/ky` | **SAFE TO RUN**, 92/100 | One warning, for a normal install script |
+| `langchain-ai/langchain` | **SAFE TO RUN**, 100/100 | A large project, so it read 2,000 of 3,118 files |
+
+These were recorded from the real scanner and will change as the projects change. The first version wrongly flagged LangChain's `self-ask-with-search` as a leaked key. That exact phrase is now a regression test.
+
+A shareable link starts the same scan: `http://127.0.0.1:4173/?repo=owner/repo`.
+
+## What it can't do
+
+ShipCheck is a set of automatic checks, not a security audit. **A clean result is a good sign, not a guarantee.**
+
+- It only works on public GitHub projects. Private and misspelled projects get the same "Case Sealed" screen, because GitHub answers "not found" for both.
+- It can't see code that a project downloads later.
+- It skips binaries, files over 500 KB, and folders such as `node_modules`, `vendor`, `dist`, and `build`.
+- On big projects, it reads up to 2,000 files, starting with the most important ones.
+- Its checks look for known patterns, so it can miss new tricks and sometimes raise false alarms.
+
+## Optional: AI-written run steps
+
+The scan and verdict work the same without a key. With one, ShipCheck also asks OpenAI to refine the "how to run it" steps.
+
+```sh
+# macOS or Linux
+OPENAI_API_KEY=your-key npm start
+```
+
+```powershell
+# Windows PowerShell
+$env:OPENAI_API_KEY="your-key"
+npm start
+```
+
+This sends the findings, a README excerpt, and project manifest files to OpenAI. Each suggested command must cite a real file from the project. If the response is invalid or takes over eight seconds, ShipCheck keeps the plan it worked out itself.
+
+| Setting | What it does |
+|---|---|
+| `OPENAI_API_KEY` | Turns on AI-written run steps |
+| `OPENAI_MODEL` | Chooses the model (default: `gpt-4o-mini`) |
+| `GITHUB_TOKEN` | Raises GitHub's limits on project lookups. Use one that can only read public repos. |
+| `PORT` | Port to listen on (default: `4173`) |
+| `HOST` | Address to listen on (default: `127.0.0.1`) |
+
+Keep keys on the server. Never put them in browser code or on GitHub Pages.
+
+## Develop
+
+```sh
+git clone https://github.com/aryan597/ship-check.git
+cd ship-check
+npm start        # run the app
+npm test         # run the tests
+node scripts/build-pages.mjs   # rebuild the demo in docs/ (needs internet)
+```
+
+There's no build step, and no runtime dependencies.
+
+| Path | What's there |
+|---|---|
+| `scanner.mjs` | Reads the archive and runs the checks |
+| `server.mjs` | Talks to GitHub and streams scan progress |
+| `public/` | The web app |
+| `docs/` | The GitHub Pages demo, generated from `public/` |
+| `demo/trap-repo/` | The planted test repo |
+| `test/` | The test suite |
+
+## Hosting
+
+The demo in `docs/` can be served by GitHub Pages. Set the Pages source to the `/docs` folder.
+
+To host live scans, use a service that runs containers and supports long-lived streaming responses:
 
 ```sh
 docker build -t shipcheck .
-docker run --rm -p 4173:4173 -e OPENAI_API_KEY shipcheck
+docker run --rm -p 4173:4173 shipcheck
 ```
 
-## How Codex helped
+**It isn't ready for open public hosting yet.** Before you expose it, add a limit on download size, limits on simultaneous scans and requests, and a cap on the result cache, and disable `DELETE /api/cache`. Running it on your own machine doesn't need any of this.
 
-- Replaced the original replay prototype with the Node server, brutalist scan view, URL state, and SSE progress stream for ShipCheck.
-- Implemented the in-memory gzip/tar parser so the real scan needs no package install or temporary checkout.
-- Caught and fixed the distinction between a valid lifecycle script and a lifecycle script that pipes a downloaded command into a shell: both are shown, with the latter marked critical.
-- Ran a live scan of `sindresorhus/ky`, validating the GitHub metadata request, tarball download, file indexing, SSE progress, and evidence rendering data.
-- Tightened the deterministic scanner after `langchain-ai/langchain` produced false criticals: key detection now requires a real vendor shape and high entropy, Base64 needs an execution sink, and test or fixture paths are downgraded to informational findings.
-- Added regression coverage for the false-positive cases and rescanned `langchain-ai/langchain` (SAFE TO RUN, 100/100, zero criticals) and `sindresorhus/ky` (SAFE TO RUN, 92/100, zero criticals).
+## Credits
 
-## Offline demo and submission
+Built in one Sunday at the DevDay Exchange Community Hackathon in London, with Codex as co-builder.
 
-The planted local trap repo and deterministic recall suite are included. Scan it without a network connection:
+Fonts: Abril Fatface, Alfa Slab One, Courier Prime, Covered By Your Grace, and JetBrains Mono, all under the SIL Open Font License. Their licenses are in [`licenses/fonts/`](licenses/fonts/).
 
-```text
-http://127.0.0.1:4173/?repo=local:demo/trap-repo
-```
+## License
 
-It deliberately produces **DO NOT RUN** with evidence for a malicious install hook, fake committed keys, webhook exfiltration, Base64 execution, a shell download pipe, and reviewer-targeting prompt injection. All keys and URLs in the fixture are fake.
-
-### 90-second demo outline
-
-1. Start on the hero: “Never npm install a stranger's repo blindly.”
-2. Paste `local:demo/trap-repo`; the scan works with Wi-Fi off.
-3. Show live scan progress, the `DO NOT RUN` verdict, and the file-and-line evidence for the install hook and webhook.
-4. Point out masked fake secrets and the prompt-injection finding.
-5. Click the shared URL in the address bar and explain that the exact same scan can be repeated.
-6. Close on `Verify` quality: deterministic checks, precision regression tests, and read-only tarball inspection.
-
-For a contrast shot, scan `sindresorhus/ky`; the precision regression result is **SAFE TO RUN**, 92/100 with no critical findings.
-
-### Publish the stage trap repo
-
-From the ShipCheck repository root, after you have authenticated the GitHub CLI:
-
-```sh
-git subtree split --prefix=demo/trap-repo -b shipcheck-trap-demo
-gh repo create aryan/shipcheck-trap-demo --public --description "Intentional security test fixture for ShipCheck"
-git push git@github.com:aryan/shipcheck-trap-demo.git shipcheck-trap-demo:main
-git branch -D shipcheck-trap-demo
-```
-
-The trap repo intentionally contains fake credential-shaped strings and malicious-looking fixture code. Its README labels it as a security test fixture; never substitute real credentials.
+[MIT](LICENSE)
