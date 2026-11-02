@@ -1,1 +1,191 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ShipCheck — is this safe to run?</title><link rel="stylesheet" href="/style.css"></head><body><header><a class="wordmark" href="/">SHIPCHECK<span>///</span></a><div>PUBLIC REPO RISK SCANNER · LOCAL BETA</div></header><main><section class="hero"><p class="kicker">BEFORE YOU CLONE</p><h1>Never npm install a stranger’s repo blind.</h1><p class="subline">Paste a GitHub URL. In 30 seconds: is it safe to run, how to run it, and what it will try to do to your machine.</p><form id="scan-form"><label for="repo">PUBLIC GITHUB REPOSITORY</label><div class="scan-box"><input id="repo" autocomplete="url" placeholder="github.com/owner/repo" required><button>SCAN <span>→</span></button></div></form><div class="examples"><span>TRY:</span><button data-repo="sindresorhus/ky">well-known clean repo</button><button data-repo="openai/openai-cookbook">OpenAI Cookbook</button><button data-repo="aryan/shipcheck-trap-demo">our trap repo</button></div></section><section class="scan-area" id="scan-area" hidden><div class="live"><div class="section-title"><span>LIVE SCAN</span><b id="scan-repo">—</b><i></i></div><div class="feed" id="feed"></div></div><div class="verdict" id="verdict"><div class="waiting">AWAITING SCAN DATA</div></div></section></main><footer>SHIPCHECK RUNS A READ-ONLY TARBALL INSPECTION. IT DOES NOT CLONE, INSTALL, OR EXECUTE THE REPOSITORY.</footer><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShipCheck</title>
+<meta name="description" content="Paste a public GitHub repo. ShipCheck reads the code without running it and shows the exact lines that could hurt you, before you clone or install anything.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23a57d4d'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%23c4122a'/%3E%3C/svg%3E">
+<!--og-->
+<link rel="preload" href="abril-fatface.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="covered-by-your-grace.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- Ink filter for rubber stamps: roughens the edge and knocks out flecks where the pad ran dry. -->
+<svg class="defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
+  <filter id="ink" x="-4%" y="-8%" width="108%" height="116%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="4" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="2.6" result="rough"/>
+    <feTurbulence type="fractalNoise" baseFrequency=".34" numOctaves="2" seed="11" result="grit"/>
+    <feColorMatrix in="grit" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -6 4.6" result="flecks"/>
+    <feComposite in="rough" in2="flecks" operator="in"/>
+  </filter>
+</defs></svg>
+
+<div class="depth-cork" aria-hidden="true"></div>
+<div class="scraps" aria-hidden="true">
+  <span class="scrap sc-photo" data-depth=".22" data-r="-7" style="top:640px;left:-12px"><b>?</b></span>
+  <span class="scrap sc-ring" data-depth=".1" data-r="0" style="top:760px;right:3%"></span>
+  <span class="scrap sc-word" data-depth=".3" data-r="-5" style="top:1180px;left:1.5%">who benefits?</span>
+  <span class="scrap sc-print" data-depth=".16" data-r="12" style="top:1500px;right:1%"><svg viewBox="0 0 80 100"><path d="M40 8C20 8 8 26 8 50c0 22 8 38 16 44M40 20c-14 0-22 14-22 32 0 16 5 30 12 38M40 32c-8 0-12 9-12 21 0 12 4 25 10 33M40 44c-3 0-4 5-4 11 0 10 4 22 8 28M40 8c20 0 32 18 32 42 0 16-3 30-8 40M40 20c14 0 22 14 22 32 0 12-2 24-6 32M40 32c8 0 12 9 12 21 0 10-2 20-4 28"/></svg></span>
+  <span class="scrap sc-map" data-depth=".14" data-r="4" style="top:2050px;left:-30px"></span>
+  <span class="scrap sc-word" data-depth=".26" data-r="4" style="top:2600px;right:1.5%">motive?</span>
+  <span class="scrap sc-photo" data-depth=".2" data-r="6" style="top:3100px;right:-14px"><b>?</b></span>
+  <span class="scrap sc-ring" data-depth=".12" data-r="0" style="top:3600px;left:2%"></span>
+  <span class="scrap sc-word" data-depth=".3" data-r="-4" style="top:4200px;left:1%">follow the string</span>
+</div>
+<div class="lamp" aria-hidden="true"><i></i></div>
+<div class="falloff" aria-hidden="true"></div>
+<canvas class="dust" aria-hidden="true"></canvas>
+<div class="torch" aria-hidden="true"><i></i></div>
+<div class="blackout" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="wordmark" href="./">SHIPCHECK<span>///</span></a>
+  <div class="topbar-right">
+    <span class="tag" id="mode-tag">LOCAL BETA</span>
+    <a class="tag tag-link" href="https://github.com/aryan597/ship-check">SOURCE ↗</a>
+  </div>
+</header>
+
+<div class="ticker" aria-hidden="true"><div class="ticker-track">
+  <span>READ-ONLY ✱ NEVER EXECUTES A LINE ✱ NO CLONE ✱ NO INSTALL ✱ NO EVIDENCE, NO FINDING ✱ </span><span>READ-ONLY ✱ NEVER EXECUTES A LINE ✱ NO CLONE ✱ NO INSTALL ✱ NO EVIDENCE, NO FINDING ✱ </span><span>READ-ONLY ✱ NEVER EXECUTES A LINE ✱ NO CLONE ✱ NO INSTALL ✱ NO EVIDENCE, NO FINDING ✱ </span>
+</div></div>
+
+<main>
+  <section class="hero">
+    <div class="clip">
+      <p class="kicker">BEFORE YOU CLONE</p>
+      <h1>Never npm install a stranger’s repo <em>blindly.<svg class="scribble" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M58 19C112 3 214 2 268 24c34 14 30 44-6 57-52 18-160 20-217 3C3 71-4 42 32 26 78 7 176 4 242 15"/></svg><i class="pin pin-word" data-pin="hero" data-order="1" data-size="big"></i></em></h1>
+      <p class="subline">Paste a GitHub URL. Before you clone or install anything, find out if it’s safe to run and exactly how to run it.</p>
+      <i class="pin pin-clip-m" data-pin="hero" data-order="1"></i>
+    </div>
+
+    <figure class="hero-crate">
+      <i class="pin pin-sheet" data-pin="hero" data-order="2"></i>
+      <canvas id="hero-crate" aria-hidden="true"></canvas>
+      <figcaption>READS THE CODE WITHOUT RUNNING IT. <b>NEVER EXECUTES A LINE.</b></figcaption>
+    </figure>
+
+    <p class="motto"><i class="pin pin-motto" data-pin="hero" data-order="3" data-c="bone"></i>no evidence,<br>no finding.</p>
+
+    <div class="intake">
+      <i class="pin pin-intake" data-pin="hero" data-order="4"></i>
+      <span class="note note-start" aria-hidden="true">start here<svg viewBox="0 0 60 40" aria-hidden="true"><path d="M3 5c14 2 28 10 42 27M45 32l-13-3M45 32l-2-14"/></svg></span>
+      <form id="scan-form" novalidate>
+        <label for="repo">PUBLIC GITHUB REPOSITORY</label>
+        <div class="scan-box">
+          <input id="repo" autocomplete="off" spellcheck="false" placeholder="github.com/owner/repo">
+          <button class="btn btn-go" type="submit">SCAN&nbsp;→</button>
+        </div>
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+      </form>
+      <div class="examples">
+        <span class="note note-try">usual suspects</span>
+        <span>TRY:</span>
+        <button class="chip chip-red" type="button" data-repo="local:demo/trap-repo">PLANTED TRAP REPO</button>
+        <button class="chip" type="button" data-repo="sindresorhus/ky">SINDRESORHUS/KY</button>
+        <button class="chip" type="button" data-repo="langchain-ai/langchain">LANGCHAIN</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="bento" id="scan-area" hidden aria-live="polite">
+    <article class="tile tile-verdict" id="verdict"></article>
+    <article class="tile tile-feed">
+      <i class="pin pin-feed" data-pin="case" data-order="2"></i>
+      <div class="tile-head"><span>02 // LIVE SCAN</span><b id="scan-repo"></b><i class="pulse" id="pulse"></i></div>
+      <div class="feed" id="feed"></div>
+    </article>
+    <article class="tile tile-crate">
+      <i class="pin pin-crate-top" data-pin="solo" data-c="black"></i>
+      <i class="pin pin-crate" data-pin="case" data-order="3"></i>
+      <div class="tile-head"><span>03 // FILE BY FILE</span></div>
+      <canvas id="scan-crate" aria-hidden="true"></canvas>
+      <span class="seal-tape" aria-hidden="true"><b>SEALED</b></span>
+      <div class="crate-legend" id="crate-legend">READING THE CODE…</div>
+    </article>
+    <article class="tile tile-callout" id="callout" hidden></article>
+    <article class="tile tile-evidence" id="evidence" hidden></article>
+    <div class="side-stack" id="side" hidden>
+      <article class="tile tile-plan" id="plan"></article>
+      <article class="tile tile-signals" id="signals"></article>
+    </div>
+  </section>
+
+  <section class="flow" id="flow" hidden aria-live="polite"></section>
+
+  <section class="why" aria-labelledby="why-title">
+    <h2 id="why-title">Why we do this. <em>Running code is an act of trust.</em></h2>
+    <p class="why-lead">When you run someone’s project, it can do anything you can do: read your files, use your logins, and send your keys anywhere. Most of us run it anyway, because nobody has time to read every file.</p>
+    <div class="why-grid">
+      <article class="why-card"><i class="pin" data-pin="solo" data-c="black"></i><b>Installing is running.</b><p>A single npm install can run code from the project before you’ve opened one file.</p></article>
+      <article class="why-card"><i class="pin" data-pin="solo" data-c="black"></i><b>A nice README proves nothing.</b><p>It tells you what a project says it does, not what the code really does.</p></article>
+      <article class="why-card"><i class="pin" data-pin="solo" data-c="black"></i><b>AI tools run code too.</b><p>Coding assistants download and run projects for you, and a file can try to talk them into it.</p></article>
+    </div>
+    <div class="why-close"><b>So we read it first.</b><p>ShipCheck reads the code without running it and shows you the exact lines that worry us, so the decision stays yours. It won’t catch everything, but it beats going in blind.</p></div>
+  </section>
+
+  <section class="catches" aria-labelledby="catches-title">
+    <h2 id="catches-title">What’s the first thing you check? <em>We check these six.</em></h2>
+    <div class="catch-grid">
+      <article class="catch c-red"><b>INSTALL TRAPS</b><p>Scripts that run by themselves the moment you type npm install.</p><code>"postinstall": "curl … | bash"</code></article>
+      <article class="catch c-yellow"><b>DOWNLOAD-AND-RUN</b><p>Code pulled from the internet and run on the spot, without you seeing it.</p><code>wget -qO- … | sh</code></article>
+      <article class="catch c-orange"><b>LEAKED KEYS</b><p>Passwords and API keys left in the code or in private settings files.</p><code>AKIA•••• · sk-p•••• · ghp_••••</code></article>
+      <article class="catch c-white"><b>DATA THEFT</b><p>Your private settings quietly sent to webhooks, Pastebin, Discord or unknown servers.</p><code>fetch("webhook…", process.env)</code></article>
+      <article class="catch c-green"><b>HIDDEN CODE</b><p>Code disguised as scrambled text, and invisible characters hiding in plain sight.</p><code>eval(Buffer.from(…, "base64"))</code></article>
+      <article class="catch c-black"><b>AI TRICKS</b><p>Messages written to talk your AI assistant into calling the project safe.</p><code>"ignore previous instructions"</code></article>
+    </div>
+  </section>
+
+  <section class="receipts" aria-labelledby="receipts-title">
+    <h2 id="receipts-title">Don’t take our word for it. <em>Check the receipts.</em></h2>
+    <div class="receipt-grid">
+      <article class="receipt r-black">
+        <i class="pin" data-pin="solo" data-c="black"></i>
+        <b>NEVER EXECUTES A LINE.</b>
+        <p>We don’t just promise this. An automatic test fails if our scanner ever gains the ability to run programs or save files.</p>
+        <a href="https://github.com/aryan597/ship-check/blob/main/test/guarantees.test.mjs">test/guarantees.test.mjs ↗</a>
+      </article>
+      <article class="receipt r-white">
+        <i class="pin" data-pin="solo" data-c="black"></i>
+        <b>NO EVIDENCE, NO FINDING.</b>
+        <p>Every warning shows the exact file, line and code. If we can’t point at it, we don’t say it.</p>
+        <code>package.json:8 → "postinstall": "curl … | bash"</code>
+      </article>
+      <article class="receipt r-green">
+        <i class="pin" data-pin="solo" data-c="black"></i>
+        <span class="receipt-score"><s>0</s> → 100<small>/100</small></span>
+        <b>WE GOT LANGCHAIN WRONG FIRST.</b>
+        <p>On hackathon day, our first scan mistook the phrase “self-ask-with-search” for a leaked API key. We fixed the check, and that exact phrase is now a test so it can’t happen again.</p>
+        <button class="btn btn-small" type="button" data-repo="langchain-ai/langchain">SCAN LANGCHAIN</button>
+      </article>
+      <article class="receipt r-red">
+        <i class="pin" data-pin="solo" data-c="black"></i>
+        <span class="receipt-score">6<small>/6</small></span>
+        <b>EVERY PLANTED ATTACK CAUGHT.</b>
+        <p>Our test repo hides six attacks, including a README telling AI tools to call it safe. An automatic test fails if we ever miss one.</p>
+        <button class="btn btn-small" type="button" data-repo="local:demo/trap-repo">SCAN THE TRAP</button>
+      </article>
+    </div>
+  </section>
+
+  <section class="try-it" aria-labelledby="try-title">
+    <i class="pin pin-try" data-pin="solo"></i>
+    <h2 id="try-title">Try it on your own projects.</h2>
+    <p>One command, no account. You just need Node.js 20 or newer. Then paste any public GitHub project.</p>
+    <div class="try-cmd"><code id="try-command">npx github:aryan597/ship-check</code><button class="btn" id="try-copy" type="button">COPY</button></div>
+  </section>
+</main>
+
+<footer>
+  <p>BUILT IN ONE SUNDAY AT THE DEVDAY EXCHANGE COMMUNITY HACKATHON, LONDON, WITH CODEX.<br>SHIPCHECK READS CODE WITHOUT RUNNING IT. IT CAN MISS THINGS, SO USE YOUR OWN JUDGEMENT TOO.</p>
+  <button class="btn btn-small" id="clear-cache" type="button">FORGET PAST SCANS</button>
+</footer>
+<script src="investigation.js"></script>
+<script src="crate.js"></script>
+<script src="flow.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

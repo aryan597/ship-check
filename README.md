@@ -1,16 +1,18 @@
 # ShipCheck
 
-**Never npm install a stranger's repo blind.**
+**Never npm install a stranger's repo blindly.**
 
 Paste a public GitHub repository URL. ShipCheck downloads its source tarball, inspects it in memory, and shows evidence-backed risks before you clone, install, or execute anything.
 
 ## What ships
 
-Run locally with Node.js 20+:
+Run it with Node.js 20+. There is nothing to clone or configure:
 
 ```sh
-npm start
+npx github:aryan597/ship-check
 ```
+
+Or, from a checkout, run `npm start`.
 
 Open http://127.0.0.1:4173 and paste `github.com/owner/repo`. A shareable `?repo=owner/repo` URL starts the same scan.
 
@@ -26,6 +28,8 @@ Current deterministic checks provide file, line, snippet, and explanation for:
 - used environment variables and whether README or `.env.example` document them
 - lockfile, test, and CI presence
 
+Two guarantees are enforced by [test/guarantees.test.mjs](test/guarantees.test.mjs): the scanner cannot import anything that spawns a process or writes to disk, and every finding has a file, a line, and a snippet. No evidence, no finding.
+
 This is a read-only scanner. It does not clone, install, or run the target repository. Findings are heuristic security signals and need human review.
 
 ShipCheck's deterministic core works without an API key or Wi-Fi against its local trap fixture. The fake trap-repo values are deliberately planted test data; public-repo results come from real files in the downloaded tarball.
@@ -38,7 +42,9 @@ Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` in the Node service environme
 
 ## Deployment
 
-GitHub Pages can publish the static project showcase from `docs/`. Pages cannot run the scanner because the scanner is a Node service and keeps `OPENAI_API_KEY` server-side.
+GitHub Pages can publish the static project showcase from `docs/`. Pages cannot run the scanner because the scanner is a Node service and keeps `OPENAI_API_KEY` server-side, so the showcase runs the real UI against scans recorded from the real scanner. After changing the UI, regenerate it with `node scripts/build-pages.mjs` (needs network access) and set the Pages source to the `/docs` folder.
+
+The frontend has no build step or runtime dependencies. Abril Fatface, Alfa Slab One, Courier Prime, Covered By Your Grace, and JetBrains Mono are self-hosted in `public/` under the SIL Open Font License, so the offline demo looks the same with Wi-Fi off. The licenses are in `licenses/fonts/`.
 
 Deploy the interactive scanner separately with Docker:
 
@@ -68,7 +74,7 @@ It deliberately produces **DO NOT RUN** with evidence for a malicious install ho
 
 ### 90-second demo outline
 
-1. Start on the hero: “Never npm install a stranger's repo blind.”
+1. Start on the hero: “Never npm install a stranger's repo blindly.”
 2. Paste `local:demo/trap-repo`; the scan works with Wi-Fi off.
 3. Show live scan progress, the `DO NOT RUN` verdict, and the file-and-line evidence for the install hook and webhook.
 4. Point out masked fake secrets and the prompt-injection finding.
